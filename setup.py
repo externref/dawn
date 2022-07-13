@@ -1,3 +1,5 @@
+# type: ignore
+
 """Install packages as defined in this file into the Python environment."""
 from setuptools import setup, find_packages
 
