@@ -17,7 +17,7 @@ setup(
     packages=find_packages(where=".", exclude=["tests"]),
     install_requires=[
         "setuptools>=45.0",
-        "hikari",
+        "hikari~=2.0.0.dev109",
     ],
     classifiers=[
         "Development Status :: 1 - Planning",
