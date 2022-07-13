@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "dawn"
+version = "0.0.1"
+description = "A command handler for hikari that I made for personal use."
+authors = ["sarthhh"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+hikari = "^2.0.0-alpha.109"
+
+[tool.poetry.dev-dependencies]
+black = "^22.6.0"
+isort = "^5.10.1"
+mypy = "^0.961"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
