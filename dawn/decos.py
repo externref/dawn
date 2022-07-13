@@ -1,5 +1,6 @@
-from dawn.slash import SlashCommand
 import typing as t
+
+from dawn.slash import SlashCommand
 
 __all__: t.Tuple[str, ...] = ("slash_command",)
 

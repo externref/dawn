@@ -2,8 +2,8 @@ import typing as t
 
 import hikari
 
-from dawn.slash import SlashCommand
 from dawn.context import SlashContext
+from dawn.slash import SlashCommand
 
 __all__: t.Tuple[str, ...] = ("Bot",)
 
@@ -45,3 +45,11 @@ class Bot(hikari.GatewayBot):
                     command.description,
                     options=command.options or hikari.UNDEFINED,
                 )
+
+    def include(self, command: SlashCommand) -> t.Callable[[], SlashCommand]:
+        def inner() -> SlashCommand:
+            nonlocal command
+            self.add_slash_command(command)
+            return command
+
+        return inner()
