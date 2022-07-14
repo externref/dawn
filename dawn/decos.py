@@ -1,9 +1,12 @@
+
+from __future__ import annotations
+
 import typing as t
 
-from dawn.slash import ArgumentOption, SlashCommand
+from dawn.slash import Option, SlashCommand
 
 if t.TYPE_CHECKING:
-    from dawn.slash import ArgumentOption
+    from dawn.slash import Option
 __all__: t.Tuple[str, ...] = ("slash_command",)
 
 
@@ -11,7 +14,7 @@ def slash_command(
     name: str | None = None,
     description: str | None = None,
     *,
-    options: t.Sequence[ArgumentOption] | None = None,
+    options: t.Sequence[Option] | None = None,
     guild_ids: t.Sequence[int] | None = None,
 ) -> t.Callable[[t.Callable], SlashCommand]:
     def inner(callback: t.Callable):
