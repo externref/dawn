@@ -1,0 +1,7 @@
+[31m`7MM"""Yb.                                                  
+[31m  MM    `Yb.                                     
+[35m  MM     `Mb  ,6"Yb.`7M'    ,A    `MF' `7MMpMMMb.      ${reset}${bold_white}光 version: ${hikari_version} ${thin_white}[${hikari_git_sha1}]${reset}
+[35m  MM      MM 8)   MM  VA   ,VAA   ,V    MM    MM       ${reset}${bold_white}interpreter: ${thin_white}${python_implementation} ${python_version}${reset}   
+[36m  MM     ,MP  ,pm9MM   VA ,V  VA ,V     MM    MM       ${reset}${bold_white}running on: ${thin_white}${system_description}${reset}
+[36m  MM    ,dP' 8M   MM    VVV    VVV      MM    MM       ${reset}${bold_white}dawn: ${thin_white}https://github.com/sarthhh/dawn${reset} 
+[33m.JMMmmmdP'   `Moo9^Yo.   W      W     .JMML  JMML.     ${reset}${bold_white}hikari: ${thin_white}https://github.com/hikari-py/hikari${reset}
