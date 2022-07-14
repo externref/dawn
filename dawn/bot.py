@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing as t
+from xml.etree.ElementInclude import default_loader
 
 import hikari
 
@@ -14,10 +15,35 @@ _LOGGER = logging.getLogger("dawn.bot")
 
 
 class Bot(hikari.GatewayBot):
-    def __init__(self, token: str, *, purge_extra=True, **options) -> None:
+    """The handler's Bot class.
+    This is a subclass of `hikari.GatewayBot` with all the features of
+    the parent class supported.
+
+    Parameters
+    ----------
+
+        token: :class:`str`
+            The bot token for your application.
+        default_guilds: :class:`Optional[int]`
+            Default guilds in which the commands will be added.
+        purge_extra: :class:`bool`
+            Commands not bound with this class gets deleted if set to `True`.
+
+    """
+
+    def __init__(
+        self,
+        token: str,
+        *,
+        default_guilds: t.Sequence[int] | None = None,
+        purge_extra=True,
+        banner: str | None = "dawn",
+        **options,
+    ) -> None:
         self._slash_commands: t.Dict[str, SlashCommand] = {}
         self._purge_extra = purge_extra
-        super().__init__(token, **options)
+        self.default_guilds = default_guilds
+        super().__init__(token, banner=banner, **options)
         self.event_manager.subscribe(
             hikari.InteractionCreateEvent, self.process_slash_commands
         )
@@ -32,6 +58,15 @@ class Bot(hikari.GatewayBot):
     async def process_slash_commands(
         self, event: hikari.InteractionCreateEvent
     ) -> None:
+        """Filters and processes the slash command interactions.
+
+        Parameters
+        ----------
+
+            event: :class:`hikari.InteractionCreateEvent`
+                The event related to this call.
+
+        """
         if isinstance(inter := event.interaction, hikari.CommandInteraction):
             if command := self._slash_commands.get(inter.command_name):
                 await self.invoke_slash_command(event, command)
@@ -39,6 +74,17 @@ class Bot(hikari.GatewayBot):
     async def invoke_slash_command(
         self, event: hikari.InteractionCreateEvent, command: SlashCommand
     ) -> None:
+        """Executes a processed `.SlashCommand`.
+
+        Parameters
+        ----------
+
+            event: :class:`hikari.InteractionCreateEvent`
+                The event related to this call.
+            command: :class:`.SlashCommand`
+                The slash command to process.
+
+        """
         args: t.List[t.Any] = []
         if not isinstance(inter := event.interaction, hikari.CommandInteraction):
             return
@@ -65,21 +111,86 @@ class Bot(hikari.GatewayBot):
         await command(SlashContext(self, event), *args)
 
     def get_command(self, name: str) -> SlashCommand | None:
+        """Gets a `.SlashCommand` by its name.
+
+        Parameters
+        ----------
+
+            name: :class:`str`
+                Name of the command.
+
+        Returns
+        -------
+
+            :class:`Optional[.SlashCommand]`
+
+        """
         return self._slash_commands.get(name)
 
     async def _update_commands(self, event: hikari.StartedEvent) -> None:
         if not (b_user := self.get_me()):
             raise Exception("Bot is not initialised yet.")
         for command in self._slash_commands.values():
-            if command.guild_ids == []:
-                await self.rest.create_slash_command(
-                    b_user.id,
-                    command.name,
-                    command.description,
-                    options=command.options or hikari.UNDEFINED,
-                )
 
-    def include(self, command: SlashCommand) -> t.Callable[[], SlashCommand]:
+            (
+                [
+                    await self.rest.create_slash_command(
+                        b_user.id,
+                        command.name,
+                        command.description,
+                        options=command.options or hikari.UNDEFINED,
+                        guild=guild_id,
+                    )
+                    for guild_id in command.guild_ids
+                ]
+                if command.guild_ids
+                else (
+                    await self.rest.create_slash_command(
+                        b_user.id,
+                        command.name,
+                        command.description,
+                        options=command.options or hikari.UNDEFINED,
+                    )
+                    if self.default_guilds is None
+                    else [
+                        await self.rest.create_slash_command(
+                            b_user.id,
+                            command.name,
+                            command.description,
+                            options=command.options or hikari.UNDEFINED,
+                            guild=guild_id,
+                        )
+                        for guild_id in self.default_guilds
+                    ]
+                )
+            )
+
+    def register(self, command: SlashCommand) -> t.Callable[[], SlashCommand]:
+        """
+        Use this decorator to add a slash command to the bot.
+
+        Returns
+        -------
+
+            :class:`t.Callable[[], SlashCommand]`
+                A callable slash command.
+
+        Example
+        -------
+        ```py
+        import dawn
+
+        bot = dawn.Bot("TOKEN")
+
+        @bot.register
+        @dawn.slash_command("ping")
+        async def ping(context: dawn.SlashContext) -> None:
+            await context.create_response("pong!")
+
+        bot.run()
+        ```
+        """
+
         def inner() -> SlashCommand:
             nonlocal command
             self.add_slash_command(command)

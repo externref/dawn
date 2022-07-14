@@ -93,18 +93,22 @@ class SlashContext:
         """Defers the response.
         This is useful if the command process is time taking or the response
         has to be created later.
-
-        Returns
-        -------
-
         """
         await self.interaction.create_initial_response(
             hikari.ResponseType.DEFERRED_MESSAGE_CREATE
         )
 
+    async def get_last_response(self) -> hikari.Message:
+        """Get the last response sent for this interaction."""
+        return await self.interaction.fetch_initial_response()
+
     async def create_response(
         self, content: hikari.UndefinedOr = hikari.UNDEFINED, **options
     ) -> None:
+        """Create a response for the SlashCommand interaction.
+
+        Paramaters are same as `hikari.CommandInteraction.create_initial_response`
+        """
         await self.interaction.create_initial_response(
             hikari.ResponseType.MESSAGE_CREATE, content, **options
         )
@@ -112,7 +116,8 @@ class SlashContext:
     async def edit_response(
         self, content: hikari.UndefinedOr = hikari.UNDEFINED, **options
     ) -> None:
+        """Edit the response sent for the SlashCommand interaction.
+
+        Paramaters are same as `hikari.CommandInteraction.create_initial_response`
+        """
         await self.interaction.edit_initial_response(content, **options)
-
-
-t.Sequence[hikari.ChannelType | int] | None
