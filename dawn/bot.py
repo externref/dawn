@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger("dawn.bot")
 
 class Bot(hikari.GatewayBot):
     """The handler's Bot class.
-    This is a subclass of `hikari.GatewayBot` with all the features of
+    This is a subclass of :class:`hikari.GatewayBot` with all the features of
     the parent class supported.
 
     Parameters
@@ -74,7 +74,7 @@ class Bot(hikari.GatewayBot):
     async def invoke_slash_command(
         self, event: hikari.InteractionCreateEvent, command: SlashCommand
     ) -> None:
-        """Executes a processed `.SlashCommand`.
+        """Executes a processed :class:`.SlashCommand`.
 
         Parameters
         ----------
@@ -111,7 +111,7 @@ class Bot(hikari.GatewayBot):
         await command(SlashContext(self, event), *args)
 
     def get_command(self, name: str) -> SlashCommand | None:
-        """Gets a `.SlashCommand` by its name.
+        """Gets a :class:`.SlashCommand` by its name.
 
         Parameters
         ----------
@@ -177,18 +177,18 @@ class Bot(hikari.GatewayBot):
 
         Example
         -------
-        ```py
-        import dawn
-
-        bot = dawn.Bot("TOKEN")
-
-        @bot.register
-        @dawn.slash_command("ping")
-        async def ping(context: dawn.SlashContext) -> None:
-            await context.create_response("pong!")
-
-        bot.run()
-        ```
+           
+            >>> import dawn
+            >>>
+            >>> bot = dawn.Bot("TOKEN")
+            >>>
+            >>> @bot.register
+            >>> @dawn.slash_command("ping")
+            >>> async def ping(context: dawn.SlashContext) -> None:
+            >>>     await context.create_response("pong!")
+            >>>
+            >>> bot.run()
+            
         """
 
         def inner() -> SlashCommand:
