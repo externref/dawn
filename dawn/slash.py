@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing as t
 
 import hikari
@@ -5,10 +7,13 @@ import hikari
 if t.TYPE_CHECKING:
     from dawn.context import SlashContext
 
-__all__: t.Tuple[str, ...] = ("SlashCommand",)
+__all__: t.Tuple[str, ...] = (
+    "Option",
+    "SlashCommand",
+)
 
 
-class ArgumentOption(hikari.CommandOption):
+class Option(hikari.CommandOption):
     option_types: dict[t.Any, t.Any] = {
         hikari.User: hikari.OptionType.USER,
         hikari.Member: hikari.OptionType.USER,
@@ -29,7 +34,7 @@ class ArgumentOption(hikari.CommandOption):
         type: t.Any = str,
         required: bool = True,
         channel_types: t.Sequence[hikari.ChannelType | int] | None = None,
-        autocomplete: bool = False
+        autocomplete: bool = False,
     ) -> None:
         option_type = self.option_types.get(type, hikari.OptionType.STRING)
         super().__init__(
@@ -47,14 +52,14 @@ class SlashCommand:
     name: str
     description: str
     guild_ids: t.Sequence[int]
-    options: t.Tuple[ArgumentOption, ...]
+    options: t.Tuple[Option, ...]
 
     def __init__(
         self,
         name: str,
         description: str,
         guild_ids: t.Sequence | None = None,
-        options: t.Tuple[ArgumentOption, ...] = (),
+        options: t.Tuple[Option, ...] = (),
     ) -> None:
         self.name = name
         self.description = description
@@ -68,6 +73,6 @@ class SlashCommand:
         ...
 
     async def callback(
-        self, context: "SlashContext", *args: t.Tuple[ArgumentOption | str, ...]
+        self, context: "SlashContext", *args: t.Tuple[Option | str, ...]
     ) -> t.Any:
         ...
