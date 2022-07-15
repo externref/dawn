@@ -6,6 +6,7 @@ import hikari
 
 if t.TYPE_CHECKING:
     from dawn.context import SlashContext
+    from dawn.extensions import Extension
 
 __all__: t.Tuple[str, ...] = (
     "Option",
@@ -29,13 +30,21 @@ class Option(hikari.CommandOption):
             option types.
 
             :class:`hikari.User`: :class:`hikari.OptionType.USER`
+
             :class:`hikari.Member`: :class:`hikari.OptionType.USER`
+
             :class:`hikari.Role`: :class:`hikari.OptionType.ROLE`
+
             :class:`hikari.GuildChannel`: :class:`hikari.OptionType.CHANNEL`
+
             :class:`hikari.Attachment`: :class:`hikari.OptionType.ATTACHMENT`
+
             :class:`bool`: :class:`hikari.OptionType.BOOLEAN`
+
             :class:`int`: :class:`hikari.OptionType.INTEGER`
+
             :class:`float`: :class:`hikari.OptionType.FLOAT`
+
             :class:`str`: :class:`hikari.OptionType.STRING`
 
         required: :class:`bool`
@@ -83,6 +92,7 @@ class Option(hikari.CommandOption):
 
 
 class SlashCommand:
+
     """
     This object represents a discord slash command.
 
@@ -102,6 +112,8 @@ class SlashCommand:
             A tuple of command options.
 
     """
+
+    extension: Extension | None = None
 
     def __init__(
         self,
