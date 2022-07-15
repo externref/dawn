@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import importlib
 import logging
 import typing as t
-from xml.etree.ElementInclude import default_loader
 
 import hikari
 
 from dawn.context import SlashContext
+from dawn.errors import (BotNotInitialised, CommandAlreadyExists,
+                         ModuleAlreadyLoaded, ModuleNotLoaded)
+from dawn.extensions import Extension
 from dawn.slash import SlashCommand
 
 __all__: t.Tuple[str, ...] = ("Bot",)
@@ -27,7 +30,7 @@ class Bot(hikari.GatewayBot):
         default_guilds: :class:`Optional[int]`
             Default guilds in which the commands will be added.
         purge_extra: :class:`bool`
-            Commands not bound with this class gets deleted if set to `True`.
+            Commands not bound with this class get deleted if set to `True`.
 
     """
 
@@ -42,6 +45,7 @@ class Bot(hikari.GatewayBot):
     ) -> None:
         self._slash_commands: t.Dict[str, SlashCommand] = {}
         self._purge_extra = purge_extra
+        self._loaded_modules: t.List[str] = []
         self.default_guilds = default_guilds
         super().__init__(token, banner=banner, **options)
         self.event_manager.subscribe(
@@ -52,7 +56,7 @@ class Bot(hikari.GatewayBot):
     def add_slash_command(self, command: SlashCommand) -> None:
 
         if self._slash_commands.get(name := command.name):
-            raise Exception(f"Command named {name} already exists.")
+            raise CommandAlreadyExists(name)
         self._slash_commands[name] = command
 
     async def process_slash_commands(
@@ -138,8 +142,14 @@ class Bot(hikari.GatewayBot):
     async def _update_slash_commands(self, event: hikari.StartedEvent) -> None:
 
         if not (b_user := self.get_me()):
-            raise Exception("Bot is not initialised yet.")
+            raise BotNotInitialised()
         if self._purge_extra is True:
+            _LOGGER.debug(
+                (
+                    "Deleting unbound commands, this might take some time.\n"
+                    "Set `purge_extra` option in Bot if you don't want this to happen every time."
+                )
+            )
             all_commands = await self.rest.fetch_application_commands(b_user.id)
             for registerd_command in all_commands:
                 if (
@@ -214,3 +224,64 @@ class Bot(hikari.GatewayBot):
             return command
 
         return inner()
+
+    def add_extension(self, extension: Extension) -> None:
+        """
+        Adds an extension to the bot.
+
+        Parameters
+        ----------
+
+            extension: :class:`.Extension`
+                The extension to be loaded.
+
+        Raises
+        ------
+
+            :class:`ValueError`
+                The extension provided wasn't dervied from :class:`.Extension` class.
+
+        """
+        if not isinstance(extension, Extension):
+            raise ValueError(f"Expected a `dawn.Extension`, got {type(extension)}")
+        extension.create_setup(self)
+
+    def load_module(self, module_path: str, /) -> None:
+        """
+        Loads a module and calls the `load` function of the module.
+
+        Parameters
+        ----------
+
+            module_path: :class:`str`
+                Path to the module.
+
+        """
+        if module_path in self._loaded_modules:
+            raise ModuleAlreadyLoaded(module_path)
+        ext = importlib.import_module(module_path)
+        if not (load_function := getattr(ext, "load")):
+            raise Exception("No load function found.")
+        else:
+            load_function(self)
+            self._loaded_modules.append(module_path)
+
+    def unload_module(self, module_path: str, /) -> None:
+        """
+        Unloads a module and calls the `unload` function of the module.
+
+        Parameters
+        ----------
+
+            module_path: :class:`str`
+                Path to the module.
+
+        """
+        if not module_path in self._loaded_modules:
+            raise ModuleNotLoaded(module_path)
+        ext = importlib.import_module(module_path)
+        if not (load_function := getattr(ext, "unload")):
+            raise Exception("No unload function found.")
+        else:
+            load_function(self)
+            self._loaded_modules.remove(module_path)
