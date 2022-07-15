@@ -66,6 +66,19 @@ class SlashCommand:
         self.guild_ids = guild_ids or []
         self.options = options
 
+    def _compare_with(self, command: "SlashCommand") -> bool:
+        return (
+            self.name == command.name
+            and self.description == command.description
+            and len(self.options) == len(command.options)
+            and all(
+                (option.name, option.description, option.type)
+                == (option_c.name, option_c.description, option.type)
+                for option, option_c in zip(self.options, command.options)
+            )
+            and True
+        )
+
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         return self.callback(*args, **kwargs)
 
