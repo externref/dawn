@@ -36,7 +36,7 @@ class Bot(hikari.GatewayBot):
         token: str,
         *,
         default_guilds: t.Sequence[int] | None = None,
-        purge_extra=True,
+        purge_extra: bool = False,
         banner: str | None = "dawn",
         **options,
     ) -> None:
@@ -47,7 +47,7 @@ class Bot(hikari.GatewayBot):
         self.event_manager.subscribe(
             hikari.InteractionCreateEvent, self.process_slash_commands
         )
-        self.event_manager.subscribe(hikari.StartedEvent, self._update_commands)
+        self.event_manager.subscribe(hikari.StartedEvent, self._update_slash_commands)
 
     def add_slash_command(self, command: SlashCommand) -> None:
 
@@ -71,6 +71,9 @@ class Bot(hikari.GatewayBot):
             if command := self._slash_commands.get(inter.command_name):
                 await self.invoke_slash_command(event, command)
 
+    def get_slash_context(self, event: hikari.InteractionCreateEvent) -> SlashContext:
+        return SlashContext(self, event)
+
     async def invoke_slash_command(
         self, event: hikari.InteractionCreateEvent, command: SlashCommand
     ) -> None:
@@ -92,13 +95,18 @@ class Bot(hikari.GatewayBot):
             if opt.type == hikari.OptionType.CHANNEL and isinstance(opt.value, int):
                 args.append(self.cache.get_guild_channel(opt.value))
             elif opt.type == hikari.OptionType.USER and isinstance(opt.value, int):
-                if g_id := inter.guild_id is None:
+                if (g_id := inter.guild_id) is None:
                     args.append(None)
-                args.append(self.cache.get_member(g_id, opt.value))
+                else:
+                    args.append(
+                        self.cache.get_member(g_id, opt.value)
+                        or await self.rest.fetch_member(g_id, opt.value)
+                    )
             elif opt.type == hikari.OptionType.ROLE and isinstance(opt.value, int):
                 if not inter.guild_id:
                     args.append(None)
-                args.append(self.cache.get_role(opt.value))
+                else:
+                    args.append(self.cache.get_role(opt.value))
             elif opt.type == hikari.OptionType.ATTACHMENT and isinstance(
                 opt.value, hikari.Snowflake
             ):
@@ -108,7 +116,7 @@ class Bot(hikari.GatewayBot):
                 args.append(attachment)
             else:
                 args.append(opt.value)
-        await command(SlashContext(self, event), *args)
+        await command(self.get_slash_context(event), *args)
 
     def get_command(self, name: str) -> SlashCommand | None:
         """Gets a :class:`.SlashCommand` by its name.
@@ -127,9 +135,18 @@ class Bot(hikari.GatewayBot):
         """
         return self._slash_commands.get(name)
 
-    async def _update_commands(self, event: hikari.StartedEvent) -> None:
+    async def _update_slash_commands(self, event: hikari.StartedEvent) -> None:
+
         if not (b_user := self.get_me()):
             raise Exception("Bot is not initialised yet.")
+        if self._purge_extra is True:
+            all_commands = await self.rest.fetch_application_commands(b_user.id)
+            for registerd_command in all_commands:
+                if (
+                    not self._slash_commands.get(registerd_command.name)
+                ) and registerd_command.type == hikari.CommandType.SLASH:
+                    await registerd_command.delete()
+
         for command in self._slash_commands.values():
 
             (
@@ -177,7 +194,7 @@ class Bot(hikari.GatewayBot):
 
         Example
         -------
-           
+
             >>> import dawn
             >>>
             >>> bot = dawn.Bot("TOKEN")
@@ -188,7 +205,7 @@ class Bot(hikari.GatewayBot):
             >>>     await context.create_response("pong!")
             >>>
             >>> bot.run()
-            
+
         """
 
         def inner() -> SlashCommand:
