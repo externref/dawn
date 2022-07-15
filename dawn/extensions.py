@@ -11,20 +11,32 @@ from dawn.errors import BotNotInitialised, CommandAlreadyExists
 
 class Extension:
     def __init__(
-        self, name: str, description: str, *, default_guilds: t.Sequence[int]
+        self,
+        name: str,
+        description: str,
+        *,
+        default_guilds: t.Sequence[int] | None = None,
     ) -> None:
         self._name = name
         self._description = description
         self._default_guilds = default_guilds
         self._loaded: bool = False
         self._slash_commands: t.Dict[str, "SlashCommand"] = {}
-        self._listeners: t.Dict[t.Any, t.List[t.Callable]]
+        self._listeners: t.Dict[t.Any, t.List[t.Callable]] = {}
 
     @property
     def bot(self) -> "Bot":
         if self._loaded is False:
             raise BotNotInitialised()
         return self._bot
+
+    @property
+    def slash_commands(self) -> t.Mapping[str, "SlashCommand"]:
+        return self._slash_commands
+
+    @property
+    def listeners(self) -> t.Mapping[t.Any, t.List[t.Callable]]:
+        return self._listeners
 
     def create_setup(self, bot: "Bot") -> "Extension":
         """
@@ -39,6 +51,8 @@ class Extension:
         """
         for name, command in self._slash_commands.items():
             command.extension = self
+            if command.guild_ids is None and self._default_guilds is not None:
+                command._guild_ids = self._default_guilds
             bot.add_slash_command(command)
         for event, listeners in self._listeners.items():
             for listener in listeners:
