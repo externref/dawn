@@ -12,6 +12,19 @@ __all__: t.Tuple[str, ...] = ("SlashContext",)
 
 
 class SlashContext:
+    """
+    This object wraps the :class:`hikari.InteractionCreateEvent` class for
+    more easy to access the class' methods and attributes.
+
+    Parameters
+    ----------
+
+        bot: :class:`.Bot`
+            The related bot class.
+        event: :class:`hikari.InteractionCreateEvent`
+            The event to get context for.
+
+    """
 
     def __init__(self, bot: "Bot", event: hikari.InteractionCreateEvent) -> None:
         if not isinstance(inter := event.interaction, hikari.CommandInteraction):
@@ -38,7 +51,8 @@ class SlashContext:
 
     @property
     def member(self) -> hikari.InteractionMember | None:
-        """:class:`hikari.InteractionMember` object of the :class:`hikari.User` who invoked the slash command, if applicable."""
+        """:class:`hikari.InteractionMember` object of the :class:`hikari.User`
+        who invoked the slash command, if applicable."""
         return self._inter.member
 
     @property
