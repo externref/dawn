@@ -92,7 +92,7 @@ class SlashContext:
     @property
     def command(self) -> t.Optional["SlashCommand"]:
         """The :class:`SlashCommand` this SlashContext belongs to."""
-        return self.bot.get_command(self.interaction.command_name)
+        return self.bot.get_slash_command(self.interaction.command_name)
 
     async def defer(self) -> None:
         """Defers the response.

@@ -129,50 +129,22 @@ class SlashCommand:
 
     @property
     def name(self) -> str:
-        """Name of the command.
-
-        Returns
-        -------
-
-            :class:`str`
-
-        """
+        """Name of the command."""
         return self._name
 
     @property
     def description(self) -> str:
-        """Description fo the command.
-
-        Returns
-        -------
-
-            :class:`str`
-
-        """
+        """Description fo the command."""
         return self._description
 
     @property
     def guild_ids(self) -> t.Sequence[int]:
-        """Sequence of guild_ids this command is bound to.
-
-        Returns
-        -------
-
-            :class:`t.Sequence[int]`
-
-        """
+        """Sequence of guild_ids this command is bound to."""
         return self._guild_ids
 
     @property
     def options(self) -> t.Tuple[Option, ...]:
-        """Tuple of command options
-
-        Returns
-        -------
-
-            :class:`t.Tuple[Option, ...]`
-
-        """
+        """Tuple of command options"""
         return self._options
 
     def _compare_with(self, command: "SlashCommand") -> bool:
