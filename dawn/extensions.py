@@ -13,7 +13,7 @@ class Extension:
     def __init__(
         self,
         name: str,
-        description: str,
+        description: str = "No Description",
         *,
         default_guilds: t.Sequence[int] | None = None,
     ) -> None:
@@ -49,6 +49,7 @@ class Extension:
                 The bot class to add extension to.
 
         """
+
         for name, command in self._slash_commands.items():
             command.extension = self
             if command.guild_ids is None and self._default_guilds is not None:
@@ -59,6 +60,7 @@ class Extension:
                 bot.event_manager.subscribe(event, listener)
         self._loaded = True
         self._bot = bot
+        bot._extensions.update({self._name: self})
         return self
 
     def register(self, command: "SlashCommand") -> "SlashCommand":
@@ -72,8 +74,6 @@ class Extension:
             :class:`t.Callable[[], "SlashCommand"]`
                 A callable slash command.
 
-        Example
-        -------
         """
 
         def inner() -> "SlashCommand":
