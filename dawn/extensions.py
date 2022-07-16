@@ -85,7 +85,7 @@ class Extension:
 
         return inner()
 
-    def listener(
+    def listen_for(
         self, event: hikari.Event
     ) -> t.Callable[[t.Callable[..., t.Any]], None]:
         """
