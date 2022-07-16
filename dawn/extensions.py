@@ -85,9 +85,7 @@ class Extension:
 
         return inner()
 
-    def listen_for(
-        self, event: hikari.Event
-    ) -> t.Callable[[t.Callable[..., t.Any]], None]:
+    def listen_for(self, event: t.Any) -> t.Callable[[t.Callable[..., t.Any]], None]:
         """
         Add a listener from the extension.
 
