@@ -10,6 +10,6 @@ Decorators related to this library.
 Decorators
 ----------
 
-.. automodule:: decos  
-    :members:
+.. autodecorator:: slash_command
+
 
