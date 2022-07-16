@@ -7,8 +7,12 @@ import typing as t
 import hikari
 
 from dawn.context import SlashContext
-from dawn.errors import (BotNotInitialised, CommandAlreadyExists,
-                         ModuleAlreadyLoaded, ModuleNotLoaded)
+from dawn.errors import (
+    BotNotInitialised,
+    CommandAlreadyExists,
+    ModuleAlreadyLoaded,
+    ModuleNotLoaded,
+)
 from dawn.extensions import Extension
 from dawn.slash import SlashCommand
 
@@ -46,6 +50,7 @@ class Bot(hikari.GatewayBot):
         self._slash_commands: t.Dict[str, SlashCommand] = {}
         self._purge_extra = purge_extra
         self._loaded_modules: t.List[str] = []
+        self._extensions: t.Dict[str, Extension] = {}
         self.default_guilds = default_guilds
         super().__init__(token, banner=banner, **options)
         self.event_manager.subscribe(
@@ -53,14 +58,51 @@ class Bot(hikari.GatewayBot):
         )
         self.event_manager.subscribe(hikari.StartedEvent, self._update_slash_commands)
 
+    @property
+    def slash_commands(self) -> t.Mapping[str, SlashCommand]:
+        """Mapping for slash command names to :class:`SlashCommadn` objects."""
+        return self._slash_commands
+
+    @property
+    def extensions(self) -> t.Mapping[str, Extension]:
+        """List of all extensions."""
+        return self._extensions
+
     def add_slash_command(self, command: SlashCommand) -> None:
 
         if self._slash_commands.get(name := command.name):
             raise CommandAlreadyExists(name)
         self._slash_commands[name] = command
 
+    def get_slash_context(self, event: hikari.InteractionCreateEvent) -> SlashContext:
+        return SlashContext(self, event)
+
+    def get_slash_command(self, name: str, /) -> SlashCommand | None:
+        """Gets a :class:`.SlashCommand` by its name.
+
+        Parameters
+        ----------
+
+            name: :class:`str`
+                Name of the command.
+
+        """
+        return self._slash_commands.get(name)
+
+    def get_extension(self, name: str, /) -> Extension | None:
+        """Get a loaded extension object using it's name.
+
+        Parameters
+        ----------
+
+            name: :class:`str`
+                Name of the extension.
+
+        """
+        return self._extensions.get(name)
+
     async def process_slash_commands(
-        self, event: hikari.InteractionCreateEvent
+        self, event: hikari.InteractionCreateEvent, /
     ) -> None:
         """Filters and processes the slash command interactions.
 
@@ -74,9 +116,6 @@ class Bot(hikari.GatewayBot):
         if isinstance(inter := event.interaction, hikari.CommandInteraction):
             if command := self._slash_commands.get(inter.command_name):
                 await self.invoke_slash_command(event, command)
-
-    def get_slash_context(self, event: hikari.InteractionCreateEvent) -> SlashContext:
-        return SlashContext(self, event)
 
     async def invoke_slash_command(
         self, event: hikari.InteractionCreateEvent, command: SlashCommand
@@ -121,23 +160,6 @@ class Bot(hikari.GatewayBot):
             else:
                 args.append(opt.value)
         await command(self.get_slash_context(event), *args)
-
-    def get_command(self, name: str) -> SlashCommand | None:
-        """Gets a :class:`.SlashCommand` by its name.
-
-        Parameters
-        ----------
-
-            name: :class:`str`
-                Name of the command.
-
-        Returns
-        -------
-
-            :class:`Optional[.SlashCommand]`
-
-        """
-        return self._slash_commands.get(name)
 
     async def _update_slash_commands(self, event: hikari.StartedEvent) -> None:
 
@@ -225,7 +247,7 @@ class Bot(hikari.GatewayBot):
 
         return inner()
 
-    def add_extension(self, extension: Extension) -> None:
+    def add_extension(self, extension: Extension, /) -> None:
         """
         Adds an extension to the bot.
 
@@ -265,23 +287,3 @@ class Bot(hikari.GatewayBot):
         else:
             load_function(self)
             self._loaded_modules.append(module_path)
-
-    def unload_module(self, module_path: str, /) -> None:
-        """
-        Unloads a module and calls the `unload` function of the module.
-
-        Parameters
-        ----------
-
-            module_path: :class:`str`
-                Path to the module.
-
-        """
-        if not module_path in self._loaded_modules:
-            raise ModuleNotLoaded(module_path)
-        ext = importlib.import_module(module_path)
-        if not (load_function := getattr(ext, "unload")):
-            raise Exception("No unload function found.")
-        else:
-            load_function(self)
-            self._loaded_modules.remove(module_path)
