@@ -8,14 +8,26 @@ if t.TYPE_CHECKING:
 
 from dawn.errors import BotNotInitialised, CommandAlreadyExists
 
+__all__: t.Tuple[str, ...] = ("Extension",)
+
 
 class Extension:
+    __slots__: t.Tuple[str, ...] = (
+        "_name",
+        "_description",
+        "_default_guilds",
+        "_loaded",
+        "_slash_commands",
+        "_listeners",
+        "_bot",
+    )
+
     def __init__(
         self,
         name: str,
         description: str = "No Description",
         *,
-        default_guilds: t.Sequence[int] | None = None,
+        default_guilds: t.List[int] | None = None,
     ) -> None:
         self._name = name
         self._description = description
@@ -29,6 +41,10 @@ class Extension:
         if self._loaded is False:
             raise BotNotInitialised()
         return self._bot
+
+    @property
+    def default_guilds(self) -> t.List[int] | None:
+        return self._default_guilds
 
     @property
     def slash_commands(self) -> t.Mapping[str, "SlashCommand"]:
@@ -51,15 +67,16 @@ class Extension:
         """
 
         for name, command in self._slash_commands.items():
-            command.extension = self
+            command._extension = self
             if command.guild_ids is None and self._default_guilds is not None:
                 command._guild_ids = self._default_guilds
             bot.add_slash_command(command)
         for event, listeners in self._listeners.items():
             for listener in listeners:
                 bot.event_manager.subscribe(event, listener)
-        self._loaded = True
         self._bot = bot
+        self._loaded = True
+
         bot._extensions.update({self._name: self})
         return self
 
@@ -92,7 +109,7 @@ class Extension:
         Parameters
         ----------
 
-            event: :class:`hikari.Event`
+            event: :class:`~hikari.Event`
                 The event to listen for.
 
         """

@@ -7,7 +7,7 @@ from dawn.slash import Option, SlashCommand
 if t.TYPE_CHECKING:
     from dawn.slash import Option
 
-_all__: t.Tuple[str, ...] = ("slash_command",)
+__all__: t.Tuple[str, ...] = ("slash_command",)
 
 
 def slash_command(
