@@ -58,6 +58,7 @@ class Option(hikari.CommandOption):
 
     """
 
+    __slots__: t.Tuple[str, ...] = ()
     option_types: dict[t.Any, t.Any] = {
         hikari.User: hikari.OptionType.USER,
         hikari.Member: hikari.OptionType.USER,
@@ -113,7 +114,13 @@ class SlashCommand:
 
     """
 
-    extension: Extension | None = None
+    __slots__: t.Tuple[str, ...] = (
+        "_extension",
+        "_name",
+        "_description",
+        "_guild_ids",
+        "_options",
+    )
 
     def __init__(
         self,
@@ -122,6 +129,7 @@ class SlashCommand:
         guild_ids: t.Sequence | None = None,
         options: t.Tuple[Option, ...] = (),
     ) -> None:
+        self._extension: Extension | None = None
         self._name = name
         self._description = description
         self._guild_ids = guild_ids or []
@@ -146,6 +154,11 @@ class SlashCommand:
     def options(self) -> t.Tuple[Option, ...]:
         """Tuple of command options"""
         return self._options
+
+    @property
+    def extension(self) -> Extension | None:
+        """Extension which is binded with this command"""
+        return self._extension
 
     def _compare_with(self, command: "SlashCommand") -> bool:
         return (

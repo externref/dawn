@@ -26,6 +26,8 @@ class SlashContext:
 
     """
 
+    __slots__: t.Tuple[str, ...] = ("_event", "_bot", "_setup", "_defered", "_inter")
+
     def __init__(self, bot: "Bot", event: hikari.InteractionCreateEvent) -> None:
         if not isinstance(inter := event.interaction, hikari.CommandInteraction):
             raise Exception(
