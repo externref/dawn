@@ -19,13 +19,6 @@ class ModuleAlreadyLoaded(DawnException):
         super().__init__(f"Module {path} is already loaded.")
 
 
-class ModuleNotLoaded(DawnException):
-    """Raised when a module which is not loaded is tried to unload."""
-
-    def __init__(self, path: str) -> None:
-        super().__init__(f"Module {path} is not loaded.")
-
-
 class BotNotInitialised(DawnException):
     """Raised when bot is accessed without initlization"""
 
