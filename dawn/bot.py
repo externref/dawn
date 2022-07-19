@@ -8,16 +8,17 @@ import typing as t
 import hikari
 
 from dawn.context import SlashContext
-from dawn.errors import BotNotInitialised, CommandAlreadyExists, ModuleAlreadyLoaded
+from dawn.errors import CommandAlreadyExists, ModuleAlreadyLoaded
 from dawn.extensions import Extension
-from dawn.slash import SlashCommand
+from dawn.internals import CommandManager
+from dawn.slash import SlashCommand, SlashGroup
 
 __all__: t.Tuple[str, ...] = ("Bot",)
 
 _LOGGER = logging.getLogger("dawn.bot")
 
 
-class Bot(hikari.GatewayBot):
+class Bot(hikari.GatewayBot, CommandManager):
     """The handler's Bot class.
     This is a subclass of :class:`~hikari.GatewayBot` with all the features of
     the parent class supported.
@@ -37,6 +38,7 @@ class Bot(hikari.GatewayBot):
     __slots__: t.Tuple[str, ...] = (
         "_slash_commands",
         "_purge_extra",
+        "_slash_groups",
         "_loaded_modules",
         "_extensions",
         "default_guilds",
@@ -62,10 +64,12 @@ class Bot(hikari.GatewayBot):
         rest_url: str | None = None,
     ) -> None:
         self._slash_commands: t.Dict[str, SlashCommand] = {}
+        self._slash_groups: t.Dict[str, SlashGroup] = {}
         self._purge_extra = purge_extra
         self._loaded_modules: t.List[str] = []
         self._extensions: t.Dict[str, Extension] = {}
         self.default_guilds = default_guilds
+        self._LOGGER = _LOGGER
         super().__init__(
             token,
             allow_color=allow_color,
@@ -84,12 +88,17 @@ class Bot(hikari.GatewayBot):
         self.event_manager.subscribe(
             hikari.InteractionCreateEvent, self.process_slash_commands
         )
-        self.event_manager.subscribe(hikari.StartedEvent, self._update_slash_commands)
+        self.event_manager.subscribe(hikari.StartedEvent, self._update_commands)
 
     @property
     def slash_commands(self) -> t.Mapping[str, SlashCommand]:
         """Mapping for slash command names to :class:`SlashCommand` objects."""
         return self._slash_commands
+
+    @property
+    def slash_groups(self) -> t.Mapping[str, SlashGroup]:
+        """Mapping for slash group names to :class:`SlashGroup` objects."""
+        return self._slash_groups
 
     @property
     def extensions(self) -> t.Mapping[str, Extension]:
@@ -110,7 +119,22 @@ class Bot(hikari.GatewayBot):
             raise CommandAlreadyExists(name)
         self._slash_commands[name] = command
 
+    def add_slash_group(self, group: SlashGroup) -> None:
+        """Add a slash command group to bot's bucket.
+
+        Parameters
+        ----------
+
+            group: :class:`SlashGroup`
+                The group to be added.
+
+        """
+        if self._slash_groups.get(name := group.name) or self._slash_commands.get(name):
+            raise CommandAlreadyExists(name)
+        self._slash_groups[name] = group
+
     def get_slash_context(self, event: hikari.InteractionCreateEvent) -> SlashContext:
+        """Wrap an :class:`~hikari.InteractionCreateEvent` into a  :class:`SlashContext` class."""
         return SlashContext(self, event)
 
     def get_slash_command(self, name: str, /) -> SlashCommand | None:
@@ -137,87 +161,9 @@ class Bot(hikari.GatewayBot):
         """
         return self._extensions.get(name)
 
-    async def process_slash_commands(
-        self, event: hikari.InteractionCreateEvent, /
-    ) -> None:
-        """Filters and processes the slash command interactions.
-
-        Parameters
-        ----------
-
-            event: :class:`~hikari.InteractionCreateEvent`
-                The event related to this call.
-
-        """
-        if isinstance(inter := event.interaction, hikari.CommandInteraction):
-            if command := self._slash_commands.get(inter.command_name):
-                await self.invoke_slash_command(event, command)
-
-    async def invoke_slash_command(
-        self, event: hikari.InteractionCreateEvent, command: SlashCommand
-    ) -> None:
-        """Executes a processed :class:`.SlashCommand`.
-
-        Parameters
-        ----------
-
-            event: :class:`hikari.InteractionCreateEvent`
-                The event related to this call.
-            command: :class:`.SlashCommand`
-                The slash command to process.
-
-        """
-        kwargs: t.Dict[str, t.Any] = {}
-        if not isinstance(inter := event.interaction, hikari.CommandInteraction):
-            return
-        for opt in inter.options or []:
-            if opt.type == hikari.OptionType.CHANNEL and isinstance(opt.value, int):
-                kwargs[opt.name] = self.cache.get_guild_channel(opt.value)
-            elif opt.type == hikari.OptionType.USER and isinstance(opt.value, int):
-                if (g_id := inter.guild_id) is None:
-                    kwargs[opt.name] = None
-                else:
-                    kwargs[opt.name] = self.cache.get_member(
-                        g_id, opt.value
-                    ) or await self.rest.fetch_member(g_id, opt.value)
-            elif opt.type == hikari.OptionType.ROLE and isinstance(opt.value, int):
-                if not inter.guild_id:
-                    kwargs[opt.name] = None
-                else:
-                    kwargs[opt.name] = self.cache.get_role(opt.value)
-            elif opt.type == hikari.OptionType.ATTACHMENT and isinstance(
-                opt.value, hikari.Snowflake
-            ):
-                if (res := inter.resolved) is None:
-                    return
-                attachment = res.attachments.get(opt.value)
-                kwargs[opt.name] = attachment
-            else:
-                kwargs[opt.name] = opt.value
-        await command(self.get_slash_context(event), *kwargs)
-
-    def _has_guild_binded(self, command: SlashCommand) -> bool:
-        return (
-            True
-            if any(
-                [
-                    command.guild_ids,
-                    (command.extension.default_guilds if command.extension else []),
-                    self.default_guilds,
-                ]
-            )
-            else False
-        )
-
-    def register(self, command: SlashCommand) -> t.Callable[[], SlashCommand]:
+    def slash(self, command: SlashCommand) -> SlashCommand:
         """
         Use this decorator to add a slash command to the bot.
-
-        Returns
-        -------
-
-            :class:`t.Callable[[], SlashCommand]`
-                A callable slash command.
 
         Example
         -------
@@ -226,7 +172,7 @@ class Bot(hikari.GatewayBot):
             >>>
             >>> bot = dawn.Bot("TOKEN")
             >>>
-            >>> @bot.register
+            >>> @bot.slash
             >>> @dawn.slash_command("ping")
             >>> async def ping(context: dawn.SlashContext) -> None:
             >>>     await context.create_response("pong!")
@@ -283,56 +229,102 @@ class Bot(hikari.GatewayBot):
             load_function(self)
             self._loaded_modules.append(module_path)
 
-    async def _update_slash_commands(self, event: hikari.StartedEvent) -> None:
-        await self._handle_global_command()
-        await self._handle_guild_commands()
+    async def process_slash_commands(
+        self, event: hikari.InteractionCreateEvent, /
+    ) -> None:
+        """Filters and processes the slash command interactions.
 
-    async def _handle_global_command(self) -> None:
-        if not (b_user := self.get_me()):
-            raise BotNotInitialised()
-        global_command_builders: t.List[hikari.api.SlashCommandBuilder] = []
-        for command in [
-            c
-            for c in self._slash_commands.values()
-            if self._has_guild_binded(c) is False
-        ]:
+        Parameters
+        ----------
 
-            command_builder = self.rest.slash_command_builder(
-                command.name, command.description
-            )
+            event: :class:`~hikari.InteractionCreateEvent`
+                The event related to this call.
 
-            [command_builder.add_option(option) for option in command.options]
-            global_command_builders.append(command_builder)
+        """
+        if isinstance(inter := event.interaction, hikari.CommandInteraction):
+            if command := self._slash_commands.get(inter.command_name):
+                await self.invoke_slash_command(event, command)
+            elif group := self._slash_groups.get(inter.command_name):
+                await self.invoke_slash_command(event, group)
 
-        if self._purge_extra is True:
-            _LOGGER.info(
-                f"Bulk over-writing {len(global_command_builders)} global commands."
-            )
-            await self.rest.set_application_commands(b_user.id, global_command_builders)
+    async def invoke_slash_command(
+        self, event: hikari.InteractionCreateEvent, command: SlashCommand | SlashGroup
+    ) -> None:
+        """Executes a processed :class:`.SlashCommand`.
 
-        else:
+        Parameters
+        ----------
 
-            [
-                await _command.create(self.rest, b_user.id)
-                for _command in global_command_builders
-            ]
+            event: :class:`hikari.InteractionCreateEvent`
+                The event related to this call.
+            command: :class:`.SlashCommand`
+                The slash command to process.
 
-    async def _handle_guild_commands(self) -> None:
-        if not (b_user := self.get_me()):
-            raise BotNotInitialised()
-        for command in [
-            c
-            for c in self._slash_commands.values()
-            if self._has_guild_binded(c) is True
-        ]:
-            command_builder = self.rest.slash_command_builder(
-                command.name, command.description
-            )
-            [command_builder.add_option(option) for option in command.options]
-            for guild in (
-                command.guild_ids
-                or (command.extension.default_guilds if command.extension else [])
-                or self.default_guilds
-                or []
+        """
+        if not isinstance(inter := event.interaction, hikari.CommandInteraction):
+            return
+        if isinstance(command, SlashCommand):
+            kwargs = await self._prepare_kwargs(inter, inter.options or [])
+            await command(self.get_slash_context(event), **kwargs)
+        elif isinstance(command, SlashGroup):
+            if not (
+                to_call := command._subcommands.get(
+                    (sub := [opt for opt in inter.options or []][0]).name
+                )
             ):
-                await command_builder.create(self.rest, b_user.id, guild=guild)
+                raise Exception("..")
+            kwargs = await self._prepare_kwargs(inter, sub.options or [])
+            await to_call(self.get_slash_context(event), **kwargs)
+
+    async def _prepare_kwargs(
+        self,
+        inter: hikari.CommandInteraction,
+        options: t.Sequence[hikari.CommandInteractionOption],
+    ) -> t.Mapping[str, t.Any]:
+
+        kwargs: t.Dict[str, t.Any] = {}
+        for opt in options or []:
+            if opt.type == hikari.OptionType.CHANNEL and isinstance(opt.value, int):
+                kwargs[opt.name] = self.cache.get_guild_channel(opt.value)
+            elif opt.type == hikari.OptionType.USER and isinstance(opt.value, int):
+                if (g_id := inter.guild_id) is None:
+                    kwargs[opt.name] = None
+                else:
+                    kwargs[opt.name] = self.cache.get_member(
+                        g_id, opt.value
+                    ) or await self.rest.fetch_member(g_id, opt.value)
+            elif opt.type == hikari.OptionType.ROLE and isinstance(opt.value, int):
+                if not inter.guild_id:
+                    kwargs[opt.name] = None
+                else:
+                    kwargs[opt.name] = self.cache.get_role(opt.value)
+            elif opt.type == hikari.OptionType.ATTACHMENT and isinstance(
+                opt.value, hikari.Snowflake
+            ):
+                if (res := inter.resolved) is None:
+                    raise Exception("")
+                attachment = res.attachments.get(opt.value)
+                kwargs[opt.name] = attachment
+            else:
+                kwargs[opt.name] = opt.value
+
+        return kwargs
+
+    def _has_guild_binded(self, command: SlashCommand | SlashGroup) -> bool:
+        return (
+            True
+            if any(
+                [
+                    command.guild_ids,
+                    (command.extension.default_guilds if command.extension else []),
+                    self.default_guilds,
+                ]
+            )
+            else False
+        )
+
+    async def _update_commands(self, event: hikari.StartedEvent) -> None:
+        await self._handle_global_command(self)
+        await self._handle_global_groups(self)
+        await self._handle_guild_commands(self)
+        await self._handle_guild_groups(self)

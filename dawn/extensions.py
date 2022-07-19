@@ -1,10 +1,8 @@
 import typing as t
 
-import hikari
-
 if t.TYPE_CHECKING:
     from dawn.bot import Bot
-    from dawn.slash import SlashCommand
+    from dawn.slash import SlashCommand, SlashGroup
 
 from dawn.errors import BotNotInitialised, CommandAlreadyExists
 
@@ -18,6 +16,7 @@ class Extension:
         "_default_guilds",
         "_loaded",
         "_slash_commands",
+        "_slash_groups",
         "_listeners",
         "_bot",
     )
@@ -33,25 +32,35 @@ class Extension:
         self._description = description
         self._default_guilds = default_guilds
         self._loaded: bool = False
+        self._slash_groups: t.Dict[str, "SlashGroup"] = {}
         self._slash_commands: t.Dict[str, "SlashCommand"] = {}
         self._listeners: t.Dict[t.Any, t.List[t.Callable]] = {}
 
     @property
     def bot(self) -> "Bot":
+        """:class:`Bot` associated with this extension"""
         if self._loaded is False:
             raise BotNotInitialised()
         return self._bot
 
     @property
     def default_guilds(self) -> t.List[int] | None:
+        """The default guilds for this extension"""
         return self._default_guilds
 
     @property
     def slash_commands(self) -> t.Mapping[str, "SlashCommand"]:
+        """Slash commands in this extension"""
         return self._slash_commands
 
     @property
+    def slash_groups(self) -> t.Mapping[str, "SlashGroup"]:
+        """Slash groups in this extension"""
+        return self._slash_groups
+
+    @property
     def listeners(self) -> t.Mapping[t.Any, t.List[t.Callable]]:
+        """Listeners in this extension"""
         return self._listeners
 
     def create_setup(self, bot: "Bot") -> "Extension":
@@ -71,6 +80,10 @@ class Extension:
             if command.guild_ids is None and self._default_guilds is not None:
                 command._guild_ids = self._default_guilds
             bot.add_slash_command(command)
+        for name, group in self._slash_groups.items():
+            if group.guild_ids is None and self._default_guilds is not None:
+                group._guild_ids = self._default_guilds
+            bot.add_slash_group(group)
         for event, listeners in self._listeners.items():
             for listener in listeners:
                 bot.event_manager.subscribe(event, listener)
@@ -122,3 +135,18 @@ class Extension:
                 lsnr.append(callback)
 
         return inner
+
+    def add_slash_group(self, group: "SlashGroup") -> None:
+        """Add a slash command group to bot's bucket.
+
+        Parameters
+        ----------
+
+            group: :class:`SlashGroup`
+                The group to be added.
+
+        """
+        if self._slash_groups.get(name := group.name) or self._slash_commands.get(name):
+            raise CommandAlreadyExists(name)
+        group._extension = self
+        self._slash_groups[name] = group
