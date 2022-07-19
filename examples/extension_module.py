@@ -1,5 +1,6 @@
-import dawn
 import hikari
+
+import dawn
 
 ext = dawn.Extension("extension")
 
