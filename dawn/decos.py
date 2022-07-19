@@ -27,10 +27,10 @@ def slash_command(
         description: :class:`str`
             Slash command description, "No Description provided" is used in case
             this argument wasn't provided.
-        `options`: :class:`Sequence[.Option]`
+        options: :class:`Sequence[.Option]`
             List of :class:`.Option` objects for the slash command.
             These represent discord slash command options.
-        `guild_ids`: :class:`Sequence[int]`
+        guild_ids: :class:`Sequence[int]`
             List of guild IDs to add the command to.
 
     """
@@ -39,9 +39,9 @@ def slash_command(
         nonlocal name, description, guild_ids
 
         slash_command = SlashCommand(
-            name or callback.__name__,
-            description or "No description provided",
-            guild_ids,
+            name=name or callback.__name__,
+            description=description or "No description provided",
+            guild_ids=guild_ids,
             options=tuple(options or []),
         )
 
