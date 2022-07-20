@@ -51,7 +51,7 @@ class SlashCommand(SlashCallable):
         options: t.Tuple[Option, ...] = (),
     ) -> None:
         self._extension: Extension | None = None
-        self._name = name
+        self._name = name.lower()
         self._description = description
         self._guild_ids = guild_ids or []
         self._options = options

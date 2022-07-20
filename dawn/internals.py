@@ -29,13 +29,16 @@ class CommandManager:
                     command_builder.add_option(sub._build_as_option())
                     for sub in group.subcommands
                 ]
+                [
+                    command_builder.add_option(subgroup._build_as_option())
+                    for subgroup in group.subgroups
+                ]
                 global_command_builders.append(command_builder)
             bot._LOGGER.info(
                 f"Bulk over-writing {len(global_command_builders)} global groups."
             )
             await bot.rest.set_application_commands(b_user.id, global_command_builders)
             return
-        bot._LOGGER.info(f"Processing {len(global_command_builders)} global groups.")
         all_commands = [
             command
             for command in await bot.rest.fetch_application_commands(b_user.id)
@@ -45,15 +48,9 @@ class CommandManager:
         ]
         command_names = [c.name for c in all_commands]
         for group in bot._slash_groups.values():
-            if not (index := command_names.index(group.name)):
-                builder = bot.rest.slash_command_builder(group.name, group.description)
-                [
-                    builder.add_option(subcmd._build_as_option())
-                    for subcmd in group.subcommands
-                ]
-                await builder.create(bot.rest, b_user.id)
-            else:
-                g_command = all_commands[index]
+
+            try:
+                g_command = all_commands[command_names.index(group.name)]
                 if all(
                     [
                         g_command.name == group.name,
@@ -75,6 +72,23 @@ class CommandManager:
                     builder.add_option(subcmd._build_as_option())
                     for subcmd in group.subcommands
                 ]
+
+                [
+                    builder.add_option(subgroup._build_as_option())
+                    for subgroup in group.subgroups
+                ]
+                await builder.create(bot.rest, b_user.id)
+            except ValueError:
+                builder = bot.rest.slash_command_builder(group.name, group.description)
+                [
+                    builder.add_option(subcmd._build_as_option())
+                    for subcmd in group.subcommands
+                ]
+
+                [
+                    builder.add_option(subgroup._build_as_option())
+                    for subgroup in group.subgroups
+                ]
                 await builder.create(bot.rest, b_user.id)
 
     @staticmethod
@@ -90,6 +104,10 @@ class CommandManager:
             [
                 command_builder.add_option(subcmd._build_as_option())
                 for subcmd in group.subcommands
+            ]
+            [
+                command_builder.add_option(subgroup._build_as_option())
+                for subgroup in group.subgroups
             ]
             for guild in (
                 group.guild_ids
@@ -129,17 +147,22 @@ class CommandManager:
             if isinstance(command, hikari.SlashCommand)
         ]
         command_names = [c.name for c in all_commands]
-        bot._LOGGER.info(f"Processing {len(bot._slash_commands)} global commands.")
         for command in bot._slash_commands.values():
-            if not (index := command_names.index(command.name)):
+            try:
+                if (
+                    command._compare_with(
+                        all_commands[command_names.index(command.name)]
+                    )
+                    is True
+                ):
+                    continue
                 builder = bot.rest.slash_command_builder(
                     command.name, command.description
                 )
                 [builder.add_option(option) for option in command.options]
                 await builder.create(bot.rest, b_user.id)
-            else:
-                if command._compare_with(all_commands[index]) is True:
-                    continue
+
+            except ValueError:
                 builder = bot.rest.slash_command_builder(
                     command.name, command.description
                 )

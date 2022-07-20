@@ -36,5 +36,8 @@ SlashSubCommand
 .. autoclass:: SlashSubCommand
     :members:
 
+SlashSubGroup
+-------------
 
-
+.. autoclass:: SlashSubGroup
+    :members:

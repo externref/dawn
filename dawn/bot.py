@@ -267,15 +267,38 @@ class Bot(hikari.GatewayBot, CommandManager):
         if isinstance(command, SlashCommand):
             kwargs = await self._prepare_kwargs(inter, inter.options or [])
             await command(self.get_slash_context(event), **kwargs)
-        elif isinstance(command, SlashGroup):
-            if not (
-                to_call := command._subcommands.get(
-                    (sub := [opt for opt in inter.options or []][0]).name
-                )
-            ):
+        elif (
+            isinstance(command, SlashGroup)
+            and (sub := [opt for opt in inter.options or []][0]).type
+            == hikari.OptionType.SUB_COMMAND
+        ):
+            if not (to_call := command._subcommands.get((sub.name))):
+                print(sub)
                 raise Exception("..")
             kwargs = await self._prepare_kwargs(inter, sub.options or [])
             await to_call(self.get_slash_context(event), **kwargs)
+        elif (
+            isinstance(command, SlashGroup)
+            and (sub := [opt for opt in inter.options or []][0]).type
+            == hikari.OptionType.SUB_COMMAND_GROUP
+        ):
+            if not (c_group := self.slash_groups.get(inter.command_name)):
+                return
+            if not (c_subgroup := c_group._subgroups.get(sub.name)):
+                return
+
+            if not (
+                sub_command := c_subgroup._subcommands.get(
+                    (sub_command_options := [option for option in sub.options or []])[
+                        0
+                    ].name
+                )
+            ):
+                return
+            kwargs = await self._prepare_kwargs(
+                inter, sub_command_options[0].options or []
+            )
+            await sub_command(self.get_slash_context(event), **kwargs)
 
     async def _prepare_kwargs(
         self,
@@ -308,7 +331,6 @@ class Bot(hikari.GatewayBot, CommandManager):
                 kwargs[opt.name] = attachment
             else:
                 kwargs[opt.name] = opt.value
-
         return kwargs
 
     def _has_guild_binded(self, command: SlashCommand | SlashGroup) -> bool:

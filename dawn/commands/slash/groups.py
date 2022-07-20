@@ -23,7 +23,7 @@ class SlashSubCommand(SlashCallable):
         description: str,
         options: t.List[Option],
     ) -> None:
-        self._name = name
+        self._name = name.lower()
         self._description = description
         self._options = options
 
@@ -63,6 +63,74 @@ class SlashSubCommand(SlashCallable):
         )
 
 
+class SlashSubGroup:
+    def __init__(self, name: str, description: str) -> None:
+        self._name = name.lower()
+        self._description = description
+        self._subcommands: t.Dict[str, SlashSubCommand] = {}
+        self._parent: SlashGroup | None = None
+
+    @property
+    def name(self) -> str:
+        """Name of the subcommand group"""
+        return self._name
+
+    @property
+    def subcommands(self) -> t.List[SlashSubCommand]:
+        """SubCommands in the group"""
+        return list(self._subcommands.values())
+
+    @property
+    def description(self) -> str:
+        """Description of the sub command group"""
+        return self._description
+
+    def get_subcommands(self) -> t.Mapping[str, SlashSubCommand]:
+        return self._subcommands
+
+    def subcommand(
+        self,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        options: t.List[Option] | None = None,
+    ) -> t.Callable[[t.Callable[..., t.Any]], SlashSubCommand]:
+        """This decorator is used to create slash subcommands.
+
+        Parameters
+        ----------
+
+            name: :class:`str`
+                Name of the subcommand.
+            description: :class:`str`
+                Description of the subcommand.
+            options: :class:`Option`
+                Options for the subcommand.
+
+        """
+
+        def inner(callback: t.Callable) -> SlashSubCommand:
+            nonlocal name, description, options
+            sub_command = SlashSubCommand(
+                name=name or callback.__name__,
+                description=description or "No Description Provided",
+                options=options or [],
+            )
+            sub_command.callback = callback  # type: ignore
+            self._subcommands[sub_command._name] = sub_command
+            return sub_command
+
+        return inner
+
+    def _build_as_option(self) -> hikari.CommandOption:
+        return hikari.CommandOption(
+            type=hikari.OptionType.SUB_COMMAND_GROUP,
+            name=self.name,
+            description=self.description,
+            options=[command._build_as_option() for command in self.subcommands],
+        )
+
+
 class SlashGroup:
     """Represents a slash command group."""
 
@@ -72,6 +140,7 @@ class SlashGroup:
         "_extension",
         "_guild_ids",
         "_subcommands",
+        "_subgroups",
     )
 
     def __init__(
@@ -81,11 +150,12 @@ class SlashGroup:
         *,
         guild_ids: t.Sequence[int] | None = None,
     ) -> None:
-        self._name = name
+        self._name = name.lower()
         self._description = description
         self._extension: Extension | None = None
         self._guild_ids = list(guild_ids) if guild_ids is not None else []
         self._subcommands: t.Dict[str, SlashSubCommand] = {}
+        self._subgroups: t.Dict[str, SlashSubGroup] = {}
 
     @property
     def name(self) -> str:
@@ -108,6 +178,13 @@ class SlashGroup:
 
     def get_subcommands(self) -> t.Mapping[str, SlashSubCommand]:
         return self._subcommands
+
+    @property
+    def subgroups(self) -> t.List[SlashSubGroup]:
+        return list(self._subgroups.values())
+
+    def get_subgroups(self) -> t.Mapping[str, SlashSubGroup]:
+        return self._subgroups
 
     @property
     def extension(self) -> Extension | None:
@@ -147,3 +224,17 @@ class SlashGroup:
             return sub_command
 
         return inner
+
+    def subgroup(
+        self,
+        *,
+        name: str,
+        description: str | None = None,
+    ) -> SlashSubGroup:
+
+        sub_group = SlashSubGroup(
+            name=name,
+            description=description or "No Description Provided",
+        )
+        self._subgroups[name] = sub_group
+        return sub_group
