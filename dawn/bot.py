@@ -7,11 +7,12 @@ import typing as t
 
 import hikari
 
-from dawn.context import SlashContext
+from dawn.commands.slash.command import SlashCommand
+from dawn.commands.slash.groups import SlashGroup
+from dawn.context.slash import SlashContext
 from dawn.errors import CommandAlreadyExists, ModuleAlreadyLoaded
 from dawn.extensions import Extension
 from dawn.internals import CommandManager
-from dawn.slash import SlashCommand, SlashGroup
 
 __all__: t.Tuple[str, ...] = ("Bot",)
 

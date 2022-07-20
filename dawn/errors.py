@@ -3,7 +3,6 @@ from __future__ import annotations
 
 class DawnException(Exception):
     """All the exceptions raised by library are subclasses of this class."""
-    ...
 
 
 class CommandAlreadyExists(DawnException):

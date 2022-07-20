@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import typing as t
 
-from dawn.slash import Option, SlashCommand
+from dawn.commands.slash.command import SlashCommand
 
 if t.TYPE_CHECKING:
-    from dawn.slash import Option
+    from dawn.commands.slash import Option
 
 __all__: t.Tuple[str, ...] = ("slash_command",)
 

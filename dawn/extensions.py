@@ -2,7 +2,8 @@ import typing as t
 
 if t.TYPE_CHECKING:
     from dawn.bot import Bot
-    from dawn.slash import SlashCommand, SlashGroup
+    from dawn.commands.slash.command import SlashCommand
+    from dawn.commands.slash.groups import SlashGroup
 
 from dawn.errors import BotNotInitialised, CommandAlreadyExists
 
