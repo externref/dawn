@@ -110,8 +110,12 @@ class SlashCommand(SlashCallable):
             >>>     await ctx.create_response(f"{ctx.author} chose {color}")
             >>>
             >>> @colors.autocomplete("color")
-            >>> async def autocomplete_for_color(...) -> ...:
-            >>>     ...
+            >>> async def ac_color(inter: hikari.AutocompleteInteraction, option: hikari.AutocompleteInteractionOption) -> list[hikari.CommandChoice| str]:
+            >>>       return [
+            >>>         "red",
+            >>>         hikari.CommandChoice(name="blue", value="blue")
+            >>>     ]
+
         """
         return super().autocomplete(option_name)
 
