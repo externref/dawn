@@ -7,6 +7,7 @@ import typing as t
 
 import hikari
 
+from dawn.commands.slash.base import SlashCallable
 from dawn.commands.slash.command import SlashCommand
 from dawn.commands.slash.groups import SlashGroup
 from dawn.context.slash import SlashContext
@@ -299,6 +300,17 @@ class Bot(hikari.GatewayBot, CommandManager):
                 inter, sub_command_options[0].options or []
             )
             await sub_command(self.get_slash_context(event), **kwargs)
+
+    async def process_autocomplete(self, event: hikari.InteractionCreateEvent) -> None:
+        if not isinstance(inter := event.interaction, hikari.AutocompleteInteraction):
+            return
+        if command := self._slash_commands.get(inter.command_name):
+            ...
+
+    async def trigger_autcomplete_for(
+        self, command: SlashCallable, inter: hikari.AutocompleteInteraction
+    ) -> None:
+        ...
 
     async def _prepare_kwargs(
         self,

@@ -89,6 +89,17 @@ class Option(hikari.CommandOption):
 
 
 class SlashCallable:
+    __slots__: t.Tuple[str, ...] = ("_autocompletes",)
+
+    def __init__(self) -> None:
+        self._autocompletes: t.Dict[str, t.Callable] = {}
+
+    @property
+    def autocompletes(self) -> t.Mapping[str, t.Callable]:
+        """Mapping of autocomples for this command"""
+
+        return self._autocompletes
+
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         return self.callback(*args, **kwargs)
 
@@ -97,3 +108,33 @@ class SlashCallable:
     ) -> t.Any:
 
         ...
+
+    def autocomplete(
+        self, option_name: str, /
+    ) -> t.Callable[[t.Callable[..., t.Any]], None]:
+        """Add autocomplete for a command option.
+
+        Parameters
+        ----------
+
+            option_name: :class:`str`
+                Name of the option this autocomplete is for.
+
+        Example
+        -------
+
+            >>> @bot.slash
+            >>> @dawn.slash_command(options=[dawn.Option("color", autocomplete=True)])
+            >>> async def colors(ctx: dawn.SlashContext, color: str) -> None:
+            >>>     await ctx.create_response(f"{ctx.author} chose {color}")
+            >>>
+            >>> @colors.autocomplete("color")
+            >>> async def autocomplete_for_color(...) -> ...:
+            >>>     ...
+        """
+
+        def inner(callback: t.Callable) -> None:
+            nonlocal option_name
+            self._autocompletes[option_name] = callback
+
+        return inner
