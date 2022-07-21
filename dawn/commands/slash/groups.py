@@ -9,13 +9,18 @@ if t.TYPE_CHECKING:
 
 from dawn.commands.slash.base import Option, SlashCallable
 
-__all__: t.Tuple[str, ...] = ("SlashSubCommand", "SlashGroup")
+__all__: t.Tuple[str, ...] = ("SlashSubCommand", "SlashSubGroup", "SlashGroup")
 
 
 class SlashSubCommand(SlashCallable):
     """This class represents a slash sub-command."""
 
-    __slots__: t.Tuple[str, ...] = ("_name", "_description", "_options")
+    __slots__: t.Tuple[str, ...] = (
+        "_name",
+        "_description",
+        "_options",
+        "_autocompletes",
+    )
 
     def __init__(
         self,
@@ -26,6 +31,7 @@ class SlashSubCommand(SlashCallable):
         self._name = name.lower()
         self._description = description
         self._options = options
+        super().__init__()
 
     def _build_as_option(self) -> hikari.CommandOption:
         return hikari.CommandOption(
@@ -49,6 +55,43 @@ class SlashSubCommand(SlashCallable):
     def options(self) -> t.List[Option]:
         """Options for the subcommand"""
         return self._options
+
+    def autocomplete(
+        self, option_name: str, /
+    ) -> t.Callable[
+        [
+            t.Callable[
+                [hikari.AutocompleteInteraction, hikari.AutocompleteInteractionOption],
+                t.Awaitable[t.Any],
+            ]
+        ],
+        None,
+    ]:
+        """Add autocomplete for a subcommand option.
+
+        Parameters
+        ----------
+
+            option_name: :class:`str`
+                Name of the option this autocomplete is for.
+
+        Example
+        -------
+
+            >>> group = dawn.SlashGroup(name="Test")
+            >>>
+            >>> bot.add_slash_group(group)
+            >>>
+            >>> @group.subcommand(options=[dawn.Option("number", type=int, autocomplete=True)])
+            >>> async def command(ctx: dawn.SlashContext, number: int) -> None:
+            >>>     await ctx.create_response(number)
+            >>>
+            >>> @command.autocomplete("number")
+            >>> async def ac_number(inter: hikari.AutocompleteInteraction,opt= hikari.AutocompleteInteractionOption) -> list[int| hikari.CommandChoice]:
+            >>>     return [1,2,3,4 , hikari.CommandChoice(name="five", value=5)]
+
+        """
+        return super().autocomplete(option_name)
 
     def _compare_with(self, option: hikari.CommandOption) -> bool:
         return (
@@ -231,6 +274,18 @@ class SlashGroup:
         name: str,
         description: str | None = None,
     ) -> SlashSubGroup:
+        """Add a subgroup to the existing group.
+
+        Parameters
+        ----------
+
+            name: :class:`str`
+                Name of the subgroup.
+            description: :class:`str`
+                Description of the subgroup.
+
+
+        """
 
         sub_group = SlashSubGroup(
             name=name,

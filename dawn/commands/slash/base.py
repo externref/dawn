@@ -59,12 +59,14 @@ class Option(hikari.CommandOption):
         hikari.User: hikari.OptionType.USER,
         hikari.Member: hikari.OptionType.USER,
         hikari.Role: hikari.OptionType.ROLE,
+        hikari.Role | hikari.Member: hikari.OptionType.MENTIONABLE,
         hikari.GuildChannel: hikari.OptionType.CHANNEL,
         hikari.Attachment: hikari.OptionType.ATTACHMENT,
         bool: hikari.OptionType.BOOLEAN,
         int: hikari.OptionType.INTEGER,
         float: hikari.OptionType.FLOAT,
         str: hikari.OptionType.STRING,
+        "@": hikari.OptionType.MENTIONABLE,
     }
 
     def __init__(
@@ -76,6 +78,8 @@ class Option(hikari.CommandOption):
         required: bool = True,
         channel_types: t.Sequence[hikari.ChannelType | int] | None = None,
         autocomplete: bool = False,
+        min_value: int | float | None = None,
+        max_value: int | float | None = None,
     ) -> None:
         option_type = self.option_types.get(type, hikari.OptionType.STRING)
         super().__init__(
@@ -85,10 +89,35 @@ class Option(hikari.CommandOption):
             is_required=required,
             channel_types=channel_types,
             autocomplete=autocomplete,
+            min_value=min_value,
+            max_value=max_value,
         )
 
 
 class SlashCallable:
+    def __init__(self) -> None:
+        self._autocompletes: t.Dict[
+            str,
+            t.Callable[
+                [hikari.AutocompleteInteraction, hikari.AutocompleteInteractionOption],
+                t.Awaitable[list[t.Any]],
+            ],
+        ] = {}
+
+    @property
+    def autocompletes(
+        self,
+    ) -> t.Mapping[
+        str,
+        t.Callable[
+            [hikari.AutocompleteInteraction, hikari.AutocompleteInteractionOption],
+            t.Awaitable[list[t.Any]],
+        ],
+    ]:
+        """Mapping of autocomples for this command"""
+
+        return self._autocompletes
+
     def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         return self.callback(*args, **kwargs)
 
@@ -97,3 +126,25 @@ class SlashCallable:
     ) -> t.Any:
 
         ...
+
+    def autocomplete(
+        self, option_name: str, /
+    ) -> t.Callable[
+        [
+            t.Callable[
+                [hikari.AutocompleteInteraction, hikari.AutocompleteInteractionOption],
+                t.Awaitable[list[t.Any]],
+            ]
+        ],
+        None,
+    ]:
+        def inner(
+            callback: t.Callable[
+                [hikari.AutocompleteInteraction, hikari.AutocompleteInteractionOption],
+                t.Awaitable[list[t.Any]],
+            ],
+        ) -> None:
+            nonlocal option_name
+            self._autocompletes[option_name] = callback
+
+        return inner
