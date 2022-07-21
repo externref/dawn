@@ -8,5 +8,10 @@ Errors related to this library.
 Errors
 ------
 
-.. automodule:: decos  
-    :members:
+.. autoclass:: DawnException
+
+.. autoclass:: CommandAlreadyExists
+
+.. autoclass:: ModuleAlreadyLoaded
+
+.. autoclass:: BotNotInitialised

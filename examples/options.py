@@ -1,10 +1,11 @@
-import dawn
 import hikari
+
+import dawn
 
 bot = dawn.Bot("TOKEN")
 
 
-@bot.register
+@bot.slash
 @dawn.slash_command(
     "echo", "Repeat your message", options=[dawn.Option("text", "text to repeat")]
 )
@@ -12,7 +13,7 @@ async def ping(ctx: dawn.SlashContext, text: str) -> None:
     await ctx.create_response(text)
 
 
-@bot.register
+@bot.slash
 @dawn.slash_command(
     "avatar_test",
     "check avatar of a user",

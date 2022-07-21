@@ -1,4 +1,5 @@
 myst-parser
 hikari
 sphinx
+groundwork-sphinx-theme
 furo

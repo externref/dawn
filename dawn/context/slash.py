@@ -6,7 +6,7 @@ import hikari
 
 if t.TYPE_CHECKING:
     from dawn.bot import Bot
-    from dawn.slash import SlashCommand
+    from dawn.commands.slash.command import SlashCommand
 
 __all__: t.Tuple[str, ...] = ("SlashContext",)
 

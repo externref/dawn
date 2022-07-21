@@ -1,9 +1,20 @@
 SlashCommand API Reference
 ==========================
 
-The SlashCommand class which wraps a discord slash command for the library.
+Classes related to the library's slash command ecosystem.
+
 
 .. currentmodule:: dawn
+
+---
+
+Option
+------
+
+.. autoclass:: Option
+    :members:
+
+---
 
 SlashCommand
 ------------
@@ -11,8 +22,22 @@ SlashCommand
 .. autoclass:: SlashCommand
     :members:
 
-Option
-------
+---
 
-.. autoclass:: Option
+SlashGroup
+----------
+
+.. autoclass:: SlashGroup
+    :members:
+
+SlashSubCommand
+---------------
+
+.. autoclass:: SlashSubCommand
+    :members:
+
+SlashSubGroup
+-------------
+
+.. autoclass:: SlashSubGroup
     :members:
