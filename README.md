@@ -12,47 +12,19 @@ A command handler for hikari.
 
 ```python
 import dawn
-import hikari
 
 bot = dawn.Bot("TOKEN")
 
 
-@bot.register
-@dawn.slash_command("ping", "Latency of the bot.")
-async def ping(context: dawn.SlashContext) -> None:
-    await context.create_response(f"Pong! {round(bot.heartbeat_latency*1000,2)}")
-
-
-# with options
-
-
-@bot.register
-@dawn.slash_command(
-    "avatar",
-    "Check user's avatar.",
-    options=[dawn.Option("user", "Target user.", type=hikari.User)],
-)
-async def avatar(context: dawn.SlashContext, user: hikari.User) -> None:
-    """
-    Sending a message and editing the response.
-    """
-    await context.create_response("Getting user avatar.")
-    await context.edit_response(str(user.display_avatar_url))
-
-
-# guild specific commands
-
-
-@bot.register
-@dawn.slash_command(
-    "echo",
-    "Repeats your text.",
-    options=[dawn.Option("text", "Text to repeat.")],
-    guild_ids=(1234567890,),
-)
-async def echo(context: dawn.SlashContext, text: str) -> None:
-    await context.create_response(text)
+@bot.slash
+@dawn.slash_command("ping", "sends a pong message")
+async def ping(ctx: dawn.SlashContext) -> None:
+    await ctx.create_response("Pong!")
 
 
 bot.run()
 ```
+
+You can find more examples in the [examples](https://github.com/sarthhh/dawn/tree/main/examples) folder.
+
+Documentation: https://hikari-dawn.readthedocs.io/en/latest/
