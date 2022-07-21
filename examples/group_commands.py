@@ -1,6 +1,6 @@
-import dawn
 import hikari
 
+import dawn
 
 bot = dawn.Bot("TOKEN")
 

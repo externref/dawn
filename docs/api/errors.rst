@@ -8,10 +8,10 @@ Errors related to this library.
 Errors
 ------
 
-.. autoclass:: DawnException
+.. autoexception:: DawnException
 
-.. autoclass:: CommandAlreadyExists
+.. autoexception:: CommandAlreadyExists
 
-.. autoclass:: ModuleAlreadyLoaded
+.. autoexception:: ModuleAlreadyLoaded
 
-.. autoclass:: BotNotInitialised
+.. autoexception:: BotNotInitialised

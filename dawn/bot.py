@@ -7,7 +7,7 @@ import typing as t
 
 import hikari
 
-from dawn.commands.slash.base import SlashCallable
+from dawn.commands.slash.base import Option, SlashCallable
 from dawn.commands.slash.command import SlashCommand
 from dawn.commands.slash.groups import SlashGroup
 from dawn.context.slash import SlashContext
@@ -91,6 +91,9 @@ class Bot(hikari.GatewayBot, CommandManager):
             hikari.InteractionCreateEvent, self.process_slash_commands
         )
         self.event_manager.subscribe(hikari.StartedEvent, self._update_commands)
+        self.event_manager.subscribe(
+            hikari.InteractionCreateEvent, self.process_autocomplete
+        )
 
     @property
     def slash_commands(self) -> t.Mapping[str, SlashCommand]:
@@ -305,12 +308,65 @@ class Bot(hikari.GatewayBot, CommandManager):
         if not isinstance(inter := event.interaction, hikari.AutocompleteInteraction):
             return
         if command := self._slash_commands.get(inter.command_name):
-            ...
+            await self.trigger_autcomplete_for(command, inter)
+        elif group := self._slash_groups.get(inter.command_name):
+            await self.trigger_autcomplete_for(group, inter)
 
     async def trigger_autcomplete_for(
-        self, command: SlashCallable, inter: hikari.AutocompleteInteraction
+        self, command: SlashCommand | SlashGroup, inter: hikari.AutocompleteInteraction
     ) -> None:
-        ...
+        if isinstance(command, SlashCommand):
+            target_option = [option for option in inter.options if option.is_focused][0]
+            if autocomplete := command.autocompletes.get(target_option.name):
+                responses = await autocomplete(inter, target_option)
+                await self._send_triggered_autocompletes(inter, responses)
+        elif isinstance(command, SlashGroup) and (
+            (sub := inter.options[0]).type == hikari.OptionType.SUB_COMMAND
+        ):
+            target_option = (
+                [option for option in (sub.options or []) if option.is_focused]
+            )[0]
+
+            if autocomplete := command._subcommands[sub.name].autocompletes.get(
+                target_option.name
+            ):  #
+                responses = await autocomplete(inter, target_option)
+                await self._send_triggered_autocompletes(inter, responses)
+        elif (
+            isinstance(command, SlashGroup)
+            and (sub := [opt for opt in inter.options or []][0]).type
+            == hikari.OptionType.SUB_COMMAND_GROUP
+        ):
+            if not (c_group := self.slash_groups.get(inter.command_name)):
+                return
+            if not (c_subgroup := c_group._subgroups.get(sub.name)):
+                return
+
+            if not (
+                sub_command := c_subgroup._subcommands.get(
+                    (sub_command_options := [option for option in sub.options or []])[
+                        0
+                    ].name
+                )
+            ):
+                return
+            target_option = [option for option in sub_command_options][0]
+            if autocomplete := sub_command.autocompletes.get(target_option.name):
+                responses = await autocomplete(inter, target_option)
+                await self._send_triggered_autocompletes(inter, responses)
+
+    async def _send_triggered_autocompletes(
+        self, inter: hikari.AutocompleteInteraction, responses: list[t.Any]
+    ) -> None:
+        autocompletes = [
+            (
+                choice
+                if isinstance(choice, hikari.CommandChoice)
+                else hikari.CommandChoice(name=str(choice), value=str(choice))
+            )
+            for choice in responses
+        ]
+        await inter.create_response(autocompletes)
 
     async def _prepare_kwargs(
         self,
