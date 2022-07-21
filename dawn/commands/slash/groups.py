@@ -50,6 +50,18 @@ class SlashSubCommand(SlashCallable):
         """Options for the subcommand"""
         return self._options
 
+    async def autocomplete(self, option_name: str, /) -> t.Callable[[t.Callable[[hikari.AutocompleteInteraction, hikari.AutocompleteInteractionOption], t.Awaitable[list[t.Any]],]], None,]:
+        """Add autocomplete for a slash subcommand option
+        
+        Parameters
+        ----------
+
+            option_name: :class:`str`
+                Name of the option this autocomplete is for.
+        
+        """
+        return super().autocomplete(option_name)
+
     def _compare_with(self, option: hikari.CommandOption) -> bool:
         return (
             self.name == option.name

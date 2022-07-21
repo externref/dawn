@@ -91,6 +91,9 @@ class Bot(hikari.GatewayBot, CommandManager):
             hikari.InteractionCreateEvent, self.process_slash_commands
         )
         self.event_manager.subscribe(hikari.StartedEvent, self._update_commands)
+        self.event_manager.subscribe(
+            hikari.InteractionCreateEvent, self.process_autocomplete
+        )
 
     @property
     def slash_commands(self) -> t.Mapping[str, SlashCommand]:
@@ -305,12 +308,24 @@ class Bot(hikari.GatewayBot, CommandManager):
         if not isinstance(inter := event.interaction, hikari.AutocompleteInteraction):
             return
         if command := self._slash_commands.get(inter.command_name):
-            ...
+            await self.trigger_autcomplete_for(command, inter)
 
     async def trigger_autcomplete_for(
         self, command: SlashCallable, inter: hikari.AutocompleteInteraction
     ) -> None:
-        ...
+        if isinstance(command, SlashCommand):
+            target_option = [option for option in inter.options if option.is_focused][0]
+            if autocomplete := command.autocompletes.get(target_option.name):
+                responses = await autocomplete(inter, target_option)
+                autocompletes = [
+                    (
+                        choice
+                        if isinstance(choice, hikari.CommandChoice)
+                        else hikari.CommandChoice(name=str(choice), value=str(choice))
+                    )
+                    for choice in responses
+                ]
+                await inter.create_response(autocompletes)
 
     async def _prepare_kwargs(
         self,

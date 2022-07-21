@@ -55,6 +55,7 @@ class SlashCommand(SlashCallable):
         self._description = description
         self._guild_ids = guild_ids or []
         self._options = options
+        super().__init__()
 
     @property
     def name(self) -> str:
@@ -80,6 +81,39 @@ class SlashCommand(SlashCallable):
     def extension(self) -> Extension | None:
         """Extension which is binded with this command"""
         return self._extension
+
+    def autocomplete(
+        self, option_name: str, /
+    ) -> t.Callable[
+        [
+            t.Callable[
+                [hikari.AutocompleteInteraction, hikari.AutocompleteInteractionOption],
+                t.Awaitable[t.Any],
+            ]
+        ],
+        None,
+    ]:
+        """Add autocomplete for a command option.
+
+        Parameters
+        ----------
+
+            option_name: :class:`str`
+                Name of the option this autocomplete is for.
+
+        Example
+        -------
+
+            >>> @bot.slash
+            >>> @dawn.slash_command(options=[dawn.Option("color", autocomplete=True)])
+            >>> async def colors(ctx: dawn.SlashContext, color: str) -> None:
+            >>>     await ctx.create_response(f"{ctx.author} chose {color}")
+            >>>
+            >>> @colors.autocomplete("color")
+            >>> async def autocomplete_for_color(...) -> ...:
+            >>>     ...
+        """
+        return super().autocomplete(option_name)
 
     def _compare_with(self, command: hikari.SlashCommand) -> bool:
         return (
